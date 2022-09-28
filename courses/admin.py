@@ -1,12 +1,13 @@
 """
 Admin site bindings for profiles
 """
+import itertools
 
 from django.contrib import admin
 from django.db import models
-from django.forms import TextInput
-from mitol.common.admin import TimestampedModelAdmin
+from django.forms import JSONField, ModelForm, TextInput
 from django.contrib.admin.decorators import display
+from mitol.common.admin import TimestampedModelAdmin
 
 from courses.models import (
     Course,
@@ -21,12 +22,47 @@ from courses.models import (
     Program,
     ProgramEnrollment,
     ProgramEnrollmentAudit,
+    ProgramRequirement,
     ProgramRun,
     PaidCourseRun,
 )
+from courses.widgets import ProgramRequirementsInput
 from main.admin import AuditableModelAdmin
 from main.utils import get_field_names
 
+
+class ProgramRequirementsTreeForm(ModelForm):
+    """Custom form for handling tree data"""
+
+    tree_data = JSONField(widget=ProgramRequirementsInput())
+
+    def __init__(self, *args, **kwargs):
+        initial = kwargs.pop("initial", {})
+        instance = kwargs.get("instance", None)
+
+        if instance is not None:
+            initial["tree_data"] = ProgramRequirement.dump_bulk(parent=instance)
+        else:
+            initial.setdefault("tree_data", [])
+
+        super().__init__(*args, initial=initial, **kwargs)
+
+    class Meta:
+        model = ProgramRequirement
+        fields = ['tree_data']
+
+
+class ProgramRequirementInline(admin.StackedInline):
+    """Admin view for the program requirements"""
+
+    model = ProgramRequirement
+    form = ProgramRequirementsTreeForm
+    verbose_name = "Program Requirements"
+    min_num = 1
+    max_num = 1
+    
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 class ProgramAdmin(admin.ModelAdmin):
     """Admin for Program"""
@@ -35,6 +71,7 @@ class ProgramAdmin(admin.ModelAdmin):
     search_fields = ["title", "readable_id"]
     list_display = ("id", "title", "readable_id")
     list_filter = ["live"]
+    inlines = [ProgramRequirementInline]
 
 
 class ProgramRunAdmin(admin.ModelAdmin):

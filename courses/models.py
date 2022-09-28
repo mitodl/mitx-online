@@ -10,9 +10,13 @@ from django.contrib.contenttypes.fields import GenericRelation
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
+from django.db.models import Q
+from django.db.models.constraints import CheckConstraint, UniqueConstraint
 from django.utils.functional import cached_property
 from django.contrib.contenttypes.models import ContentType
 from django_countries.fields import CountryField
+from treebeard.mp_tree import MP_Node
+
 from mitol.common.models import TimestampedModel
 from mitol.common.utils.collections import first_matching_item
 from mitol.common.utils.datetime import now_in_utc
@@ -62,6 +66,10 @@ class CourseQuerySet(models.QuerySet):  # pylint: disable=missing-docstring
     def live(self):
         """Applies a filter for Courses with live=True"""
         return self.filter(live=True)
+
+    def courses_in_program(self, program):
+        """Return a list of courses that are required by a given program"""
+        return self.filter(in_programs__program=program)
 
 
 class CourseRunQuerySet(models.QuerySet):  # pylint: disable=missing-docstring
@@ -148,6 +156,9 @@ class Program(TimestampedModel, ValidateOnSaveMixin):
     def text_id(self):
         """Gets the readable_id"""
         return self.readable_id
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
 
     def __str__(self):
         title = f"{self.readable_id} | {self.title}"
@@ -900,3 +911,129 @@ class PaidCourseRun(TimestampedModel):
 
     def __str__(self):
         return f"Paid Course Run - {self.course_run.courseware_id} by {self.user.name}"
+
+
+class ProgramRequirement(MP_Node):
+    """
+    A representation of program requirements.
+
+    There are 3 types of nodes that exist in a requirement tree:
+
+    Root nodes - these represent a program
+    Operator nodes - these represent a logical operation over a set of courses
+    Course nodes - these represent a reference to a course
+
+    Usage:
+
+    root = ProgramRequirement.add_root(program=program)
+
+    required_courses = root.add_child(operator=ProgramRequirement.Operator.all_of, title="Required Courses")
+    required_courses.add_child(course=course1)
+    required_courses.add_child(course=course2)
+
+    # at least two must be taken
+    elective_courses = root.add_child(
+        operator=ProgramRequirement.Operator.MIN_NUMBER_OF,
+        operator_value=2,
+        title="Elective Courses"
+    )
+    elective_courses.add_child(course=course3)
+    elective_courses.add_child(course=course4)
+
+    # 3rd elective option is at least one of these courses
+    mut_exclusive_courses = elective_courses.add_child(
+        operator=ProgramRequirement.Operator.MIN_NUMBER_OF,
+        operator_value=1
+    )
+    mut_exclusive_courses.add_child(course=course5)
+    mut_exclusive_courses.add_child(course=course6)
+
+    """
+    # extended alphabet from the default to the recommended one for postgres
+    alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
+    class Operator(models.TextChoices):
+        ALL_OF = "all_of", "All of"
+        MIN_NUMBER_OF = "min_number_of", "Minimum # of"
+
+    operator = models.CharField(
+        choices=Operator.choices,
+        max_length=len(max(Operator.values, key=len)),
+        null=True,
+    )
+    operator_value = models.CharField(max_length=100, null=True)
+
+    program = models.ForeignKey(
+        "courses.Program", on_delete=models.CASCADE, related_name="all_requirements"
+    )
+    course = models.ForeignKey(
+        "courses.Course",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="in_programs",
+    )
+
+    title = models.TextField(blank=True, default="")
+
+    @property
+    def is_all_of_operator(self):
+        """True if the node is an ALL_OF operator"""
+        return self.operator == self.Operator.ALL_OF.value
+
+    @property
+    def is_min_number_of_operator(self):
+        """True if the node is a MIN_NUMBER_OF operator"""
+        return self.operator == self.Operator.MIN_NUMBER_OF.value
+
+    @property
+    def is_operator(self):
+        """True if the node is an operator"""
+        return self.operator is not None
+
+    @property
+    def is_course(self):
+        """True if the node references a course"""
+        return self.course is not None
+
+    def add_child(self, **kwargs):
+        """Children must always have the same program"""
+        kwargs["program"] = self.program
+        return super().add_child(**kwargs)
+
+    def __str__(self):
+        if self.depth == 1:
+            return f"Root of {self.program.title} Program"
+        elif self.operator is not None:
+            return f"Operator {self.operator}"
+        return f"Course {self.course.title}"
+
+    class Meta:
+        constraints = (
+            # validate the fields based on the node 'type'
+            CheckConstraint(
+                name="courses_programrequirement_node_check",
+                check=(
+                    # root nodes
+                    Q(depth=1, operator__isnull=True, course__isnull=True)
+                    # non-root nodes are either operators or courses
+                    | Q(depth__gt=1)
+                    & (
+                        # course nodes can't be operators
+                        Q(operator__isnull=True, course__isnull=False)
+                        # operator nodes can't be courses
+                        | Q(operator__isnull=False, course__isnull=True)
+                    )
+                ),
+            ),
+            # only all 1 root node per program
+            UniqueConstraint(
+                name="courses_programrequirement_root_uniq",
+                fields=("program", "depth"),
+                condition=Q(depth=1),
+            ),
+        )
+        index_together = (
+            ("program", "course"),
+            ("course", "program"),
+        )

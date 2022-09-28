@@ -147,6 +147,8 @@ django-hijack-admin==2.1.10
     # via -r requirements.in
 django-ipware==4.0.0
     # via -r requirements.in
+django-json-widget==1.1.1
+    # via -r requirements.in
 django-modelcluster==5.2
     # via wagtail
 django-oauth-toolkit==1.7.0
@@ -166,7 +168,9 @@ django-taggit==1.5.1
 django-templated-mail==1.1.1
     # via djoser
 django-treebeard==4.5.1
-    # via wagtail
+    # via
+    #   -r requirements.in
+    #   wagtail
 django-user-agents==0.4.0
     # via -r requirements.in
 django-webpack-loader==1.4.1
@@ -202,6 +206,8 @@ factory-boy==3.2.0
     #   mitol-django-google-sheets
 faker==8.8.2
     # via factory-boy
+future==0.18.2
+    # via django-json-widget
 google-api-python-client==1.7.11
     # via
     #   mitol-django-google-sheets
