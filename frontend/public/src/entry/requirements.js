@@ -19,7 +19,7 @@ if (!Object.entries) {
     entries.shim()
 }
 
-const elements = document.querySelectorAll('.program-requirements-field');
+const elements = document.querySelectorAll('#all_requirements-0 .program-requirements-field');
 
 for (const element of elements) {
     ReactDOM.render(

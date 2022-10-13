@@ -2,6 +2,7 @@
 Admin site bindings for profiles
 """
 import itertools
+import json
 
 from django.contrib import admin
 from django.db import models
@@ -72,6 +73,20 @@ class ProgramAdmin(admin.ModelAdmin):
     list_display = ("id", "title", "readable_id")
     list_filter = ["live"]
     inlines = [ProgramRequirementInline]
+
+
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['courses'] = self.get_courses_json()
+        return super().change_view(
+            request, object_id, form_url, extra_context=extra_context,
+        )
+    
+    def get_courses_json(self):
+        return json.dumps([{
+            "id": course.id, 
+            "title": course.title,
+        } for course in Course.objects.all()])
 
 
 class ProgramRunAdmin(admin.ModelAdmin):

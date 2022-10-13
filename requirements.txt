@@ -98,6 +98,7 @@ django==3.2.15
     #   django-cors-headers
     #   django-filter
     #   django-fsm-admin
+    #   django-jsonform
     #   django-oauth-toolkit
     #   django-redis
     #   django-reversion
@@ -147,7 +148,7 @@ django-hijack-admin==2.1.10
     # via -r requirements.in
 django-ipware==4.0.0
     # via -r requirements.in
-django-json-widget==1.1.1
+django-jsonform==2.13.0
     # via -r requirements.in
 django-modelcluster==5.2
     # via wagtail
@@ -206,8 +207,6 @@ factory-boy==3.2.0
     #   mitol-django-google-sheets
 faker==8.8.2
     # via factory-boy
-future==0.18.2
-    # via django-json-widget
 google-api-python-client==1.7.11
     # via
     #   mitol-django-google-sheets

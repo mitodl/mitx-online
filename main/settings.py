@@ -189,6 +189,8 @@ INSTALLED_APPS = (
     "reversion",
     # django-treebeard
     "treebeard",
+    # jsonform for admin
+    "django_jsonform",
     # Put our apps after this point
     "main",
     "authentication",
