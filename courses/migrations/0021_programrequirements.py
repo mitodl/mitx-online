@@ -7,34 +7,94 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('courses', '0020_courseruncertificate_certificate_page_revision'),
+        ("courses", "0020_courseruncertificate_certificate_page_revision"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ProgramRequirement',
+            name="ProgramRequirement",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('path', models.CharField(max_length=255, unique=True)),
-                ('depth', models.PositiveIntegerField()),
-                ('numchild', models.PositiveIntegerField(default=0)),
-                ('operator', models.CharField(choices=[('all_of', 'All of'), ('min_number_of', 'Minimum # of')], max_length=13, null=True)),
-                ('operator_value', models.CharField(max_length=100, null=True)),
-                ('title', models.TextField(blank=True, default='')),
-                ('course', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='in_programs', to='courses.course')),
-                ('program', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='all_requirements', to='courses.program')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("path", models.CharField(max_length=255, unique=True)),
+                ("depth", models.PositiveIntegerField()),
+                ("numchild", models.PositiveIntegerField(default=0)),
+                (
+                    "operator",
+                    models.CharField(
+                        choices=[
+                            ("all_of", "All of"),
+                            ("min_number_of", "Minimum # of"),
+                        ],
+                        max_length=13,
+                        null=True,
+                    ),
+                ),
+                ("operator_value", models.CharField(max_length=100, null=True)),
+                ("title", models.TextField(blank=True, default="")),
+                (
+                    "course",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="in_programs",
+                        to="courses.course",
+                    ),
+                ),
+                (
+                    "program",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="all_requirements",
+                        to="courses.program",
+                    ),
+                ),
             ],
         ),
         migrations.AddConstraint(
-            model_name='programrequirement',
-            constraint=models.CheckConstraint(check=models.Q(models.Q(('course__isnull', True), ('depth', 1), ('operator__isnull', True)), models.Q(('depth__gt', 1), models.Q(models.Q(('course__isnull', False), ('operator__isnull', True)), models.Q(('course__isnull', True), ('operator__isnull', False)), _connector='OR')), _connector='OR'), name='courses_programrequirement_node_check'),
+            model_name="programrequirement",
+            constraint=models.CheckConstraint(
+                check=models.Q(
+                    models.Q(
+                        ("course__isnull", True),
+                        ("depth", 1),
+                        ("operator__isnull", True),
+                    ),
+                    models.Q(
+                        ("depth__gt", 1),
+                        models.Q(
+                            models.Q(
+                                ("course__isnull", False), ("operator__isnull", True)
+                            ),
+                            models.Q(
+                                ("course__isnull", True), ("operator__isnull", False)
+                            ),
+                            _connector="OR",
+                        ),
+                    ),
+                    _connector="OR",
+                ),
+                name="courses_programrequirement_node_check",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='programrequirement',
-            constraint=models.UniqueConstraint(condition=models.Q(('depth', 1)), fields=('program', 'depth'), name='courses_programrequirement_root_uniq'),
+            model_name="programrequirement",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("depth", 1)),
+                fields=("program", "depth"),
+                name="courses_programrequirement_root_uniq",
+            ),
         ),
         migrations.AlterIndexTogether(
-            name='programrequirement',
-            index_together={('course', 'program'), ('program', 'course')},
+            name="programrequirement",
+            index_together={("course", "program"), ("program", "course")},
         ),
     ]

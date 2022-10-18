@@ -16,7 +16,7 @@ module.exports = function (env, argv) {
       header: "./src/entry/header",
       style: "./src/entry/style",
       django: "./src/entry/django",
-      requirements: "./src/entry/requirements",
+      requirementsAdmin: "./src/entry/requirements-admin"
     },
     output: {
       path: path.resolve(__dirname, "build"),

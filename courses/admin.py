@@ -6,7 +6,7 @@ import json
 
 from django.contrib import admin
 from django.db import models
-from django.forms import JSONField, ModelForm, TextInput
+from django.forms import ModelForm, TextInput
 from django.contrib.admin.decorators import display
 from mitol.common.admin import TimestampedModelAdmin
 
@@ -27,66 +27,36 @@ from courses.models import (
     ProgramRun,
     PaidCourseRun,
 )
-from courses.widgets import ProgramRequirementsInput
+from courses.forms import ProgramAdminForm
 from main.admin import AuditableModelAdmin
 from main.utils import get_field_names
 
-
-class ProgramRequirementsTreeForm(ModelForm):
-    """Custom form for handling tree data"""
-
-    tree_data = JSONField(widget=ProgramRequirementsInput())
-
-    def __init__(self, *args, **kwargs):
-        initial = kwargs.pop("initial", {})
-        instance = kwargs.get("instance", None)
-
-        if instance is not None:
-            initial["tree_data"] = ProgramRequirement.dump_bulk(parent=instance)
-        else:
-            initial.setdefault("tree_data", [])
-
-        super().__init__(*args, initial=initial, **kwargs)
-
-    class Meta:
-        model = ProgramRequirement
-        fields = ['tree_data']
-
-
-class ProgramRequirementInline(admin.StackedInline):
-    """Admin view for the program requirements"""
-
-    model = ProgramRequirement
-    form = ProgramRequirementsTreeForm
-    verbose_name = "Program Requirements"
-    min_num = 1
-    max_num = 1
-    
-    def has_delete_permission(self, request, obj=None):
-        return False
 
 class ProgramAdmin(admin.ModelAdmin):
     """Admin for Program"""
 
     model = Program
+    form = ProgramAdminForm
     search_fields = ["title", "readable_id"]
     list_display = ("id", "title", "readable_id")
     list_filter = ["live"]
-    inlines = [ProgramRequirementInline]
 
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
 
-    def change_view(self, request, object_id, form_url='', extra_context=None):
-        extra_context = extra_context or {}
-        extra_context['courses'] = self.get_courses_json()
-        return super().change_view(
-            request, object_id, form_url, extra_context=extra_context,
-        )
-    
-    def get_courses_json(self):
-        return json.dumps([{
-            "id": course.id, 
-            "title": course.title,
-        } for course in Course.objects.all()])
+        self.save_requirements(obj, form)
+
+    def save_requirements(self, obj, form):
+        data = form.cleaned_data["requirements"]
+
+        def _set_program_ids(nodes):
+            for node in nodes:
+                node["data"]["program_id"] = obj.id
+                _set_program_ids(node.get("children", []))
+
+        _set_program_ids(data)
+
+        ProgramRequirement.load_bulk(data, parent=obj.requirements_root)
 
 
 class ProgramRunAdmin(admin.ModelAdmin):

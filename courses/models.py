@@ -157,8 +157,18 @@ class Program(TimestampedModel, ValidateOnSaveMixin):
         """Gets the readable_id"""
         return self.readable_id
 
+    @property
+    def requirements_root(self):
+        """The root of the requirements tree"""
+        return ProgramRequirement.get_root_nodes().filter(program=self).first()
+
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
+
+        if not ProgramRequirement.get_root_nodes().filter(program=self).exists():
+            ProgramRequirement.add_root(
+                program=self, node_type=ProgramRequirementNodeType.PROGRAM_ROOT.value
+            )
 
     def __str__(self):
         title = f"{self.readable_id} | {self.title}"
@@ -913,6 +923,12 @@ class PaidCourseRun(TimestampedModel):
         return f"Paid Course Run - {self.course_run.courseware_id} by {self.user.name}"
 
 
+class ProgramRequirementNodeType(models.TextChoices):
+    PROGRAM_ROOT = "program_root", "Program Root"
+    OPERATOR = "operator", "Operator"
+    COURSE = "course", "Course"
+
+
 class ProgramRequirement(MP_Node):
     """
     A representation of program requirements.
@@ -949,8 +965,15 @@ class ProgramRequirement(MP_Node):
     mut_exclusive_courses.add_child(course=course6)
 
     """
+
     # extended alphabet from the default to the recommended one for postgres
     alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
+    node_type = models.CharField(
+        choices=ProgramRequirementNodeType.choices,
+        max_length=len(max(ProgramRequirementNodeType.values, key=len)),
+        null=True,
+    )
 
     class Operator(models.TextChoices):
         ALL_OF = "all_of", "All of"
@@ -989,12 +1012,17 @@ class ProgramRequirement(MP_Node):
     @property
     def is_operator(self):
         """True if the node is an operator"""
-        return self.operator is not None
+        return self.node_type == NodeType.OPERATOR.value
 
     @property
     def is_course(self):
         """True if the node references a course"""
-        return self.course is not None
+        return self.node_type == NodeType.COURSE.value
+
+    @property
+    def is_root(self):
+        """True if the node is the root"""
+        return self.node_type == NodeType.PROGRAM_ROOT.value
 
     def add_child(self, **kwargs):
         """Children must always have the same program"""
@@ -1002,9 +1030,9 @@ class ProgramRequirement(MP_Node):
         return super().add_child(**kwargs)
 
     def __str__(self):
-        if self.depth == 1:
+        if self.is_root:
             return f"Root of {self.program.title} Program"
-        elif self.operator is not None:
+        elif self.is_operator:
             return f"Operator {self.operator}"
         return f"Course {self.course.title}"
 
@@ -1015,14 +1043,27 @@ class ProgramRequirement(MP_Node):
                 name="courses_programrequirement_node_check",
                 check=(
                     # root nodes
-                    Q(depth=1, operator__isnull=True, course__isnull=True)
-                    # non-root nodes are either operators or courses
-                    | Q(depth__gt=1)
-                    & (
-                        # course nodes can't be operators
-                        Q(operator__isnull=True, course__isnull=False)
-                        # operator nodes can't be courses
-                        | Q(operator__isnull=False, course__isnull=True)
+                    Q(
+                        node_type=ProgramRequirementNodeType.PROGRAM_ROOT.value,
+                        operator__isnull=True,
+                        operator_value__isnull=True,
+                        course__isnull=True,
+                        depth=1,
+                    )
+                    # operator nodes
+                    | Q(
+                        node_type=ProgramRequirementNodeType.OPERATOR.value,
+                        operator__isnull=False,
+                        course__isnull=True,
+                        depth__gt=1,
+                    )
+                    # course nodes
+                    | Q(
+                        node_type=ProgramRequirementNodeType.COURSE.value,
+                        operator__isnull=True,
+                        operator_value__isnull=True,
+                        course__isnull=False,
+                        depth__gt=1,
                     )
                 ),
             ),

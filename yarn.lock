@@ -2346,6 +2346,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@json-editor/json-editor@npm:^2.9.0-beta.0":
+  version: 2.9.0-beta.0
+  resolution: "@json-editor/json-editor@npm:2.9.0-beta.0"
+  dependencies:
+    core-js: ^3.12.1
+  checksum: 79ecde84e3fa8f26b1dd6937882f42527f6f97dd23fc0e11a1e15c8879bb590fbef1ae744d03c6f357bbef3ab3ccbd44719bc96a293cdf83b9b12caa31afb8f4
+  languageName: node
+  linkType: hard
+
 "@leichtgewicht/ip-codec@npm:^2.0.1":
   version: 2.0.3
   resolution: "@leichtgewicht/ip-codec@npm:2.0.3"
@@ -6520,6 +6529,13 @@ __metadata:
   version: 3.21.1
   resolution: "core-js@npm:3.21.1"
   checksum: d68eddd831340ad5b24ac29c72fda022a43b17f194c4278b6b875a843283d316502cb4abd07f28631d6ebc4387f66aa06e2b1b3c8fd7e08096a751b5c63f6889
+  languageName: node
+  linkType: hard
+
+"core-js@npm:^3.12.1":
+  version: 3.25.5
+  resolution: "core-js@npm:3.25.5"
+  checksum: 208b308c49bc022f90d4349d4c99802a73c9d55053976b3c529f10014c1e37845926defad8c519f2c7f71ea0acf18d2b323ab6aaee34dc85b4c4b3ced0623f3f
   languageName: node
   linkType: hard
 
@@ -13515,6 +13531,7 @@ __metadata:
     "@dnd-kit/core": ^6.0.5
     "@dnd-kit/sortable": ^7.0.1
     "@fancyapps/fancybox": 3.5.7
+    "@json-editor/json-editor": ^2.9.0-beta.0
     "@material/layout-grid": 0.41.0
     "@material/top-app-bar": 1.1.1
     "@sentry/browser": 6.19.3
