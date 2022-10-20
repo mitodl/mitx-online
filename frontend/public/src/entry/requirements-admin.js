@@ -14,11 +14,14 @@ document.addEventListener("DOMContentLoaded", function() {
         const editor = new JSONEditor(container, {
             disable_array_delete_all_rows: true,
             disable_array_delete_last_row: true,
+            disable_collapse: true,
             disable_edit_json: true,
             disable_properties: true,
+            iconlib: "spectre",
+            keep_oneof_values: false,
             no_additional_properties: true,
             schema: schema,
-            //startval: value,
+            startval: value,
             use_name_attributes: false
         });
 

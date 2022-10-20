@@ -6,6 +6,7 @@ from urllib.parse import urljoin
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.templatetags.static import static
+from mitol.common.utils.collections import filter_dict_by_key_set
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -472,3 +473,107 @@ class ProgramEnrollmentSerializer(serializers.ModelSerializer):
 class UserProgramEnrollmentDetailSerializer(serializers.Serializer):
     program = ProgramSerializer()
     enrollments = CourseRunEnrollmentSerializer(many=True)
+
+
+class ProgramRequirementDataSerializer(serializers.Serializer):
+    """Serializer for a ProgramRequirement tree to be serialized to and from a dict representation"""
+
+
+
+    node_type = serializers.CharField()
+    course_id = serializers.CharField()
+    program_id = serializers.CharField()
+    title = serializers.CharField()
+    operator = serializers.CharField()
+    operator_value = serializers.CharField()
+
+    def __init_(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        allowed = self._get_allowed_fields_by_node_type(kwargs.get("data", {}))
+        existing = set(self.fields)
+
+        for field_name in existing - allowed:
+            self.fields.pop(field_name)
+
+    def _get_allowed_fields_by_node_type(self, data):
+        node_type = data.get("node_type", None) 
+        # if node_type == ProgramRequirementNodeType.COURSE.value:
+        #     return { "node_type", "program_id", "course_id" }
+        # elif node_type == ProgramRequirementNodeType.OPERATOR.value:
+        #     return { "node_type", "program_id", "operator", "operator_value", "title" }
+
+        return set(self.fields)
+
+    def validate(self, data):
+        if data["node_type"] == ProgramRequirementNodeType.PROGRAM_ROOT.value:
+            raise ValidationError(
+                {
+                    "node_type": f"Node type '{ProgramRequirementNodeType.PROGRAM_ROOT.value}' is not supported for non-root nodes"
+                }
+            )
+
+        if data["node_type"] not in (
+            ProgramRequirementNodeType.OPERATOR.value,
+            ProgramRequirementNodeType.COURSE.value,
+        ):
+            raise ValidationError(
+                {"node_type": f"Node type '{data['node_type']}' is not supported"}
+            )
+
+        return validated_data
+
+
+class ProgramRequirementSerializer(serializers.Serializer):
+    """Serializer for a ProgramRequirement tree to be serialized to and from a dict representation"""
+
+    data = ProgramRequirementDataSerializer()
+
+    def validate(self, data):
+        children_serializer = ProgramRequirementSerializer(
+            instance=self.instance,
+            data=data.get("children", []),
+            many=True,
+        )
+
+        children_serializer.is_valid(raise_exception=True)
+
+        data["children"] = children_serializer.data
+
+        return data
+
+
+class ProgramRequirementTreeSerializer(serializers.Serializer):
+    """
+    Serializer for root nodes of a program requirement tree
+
+    The instance is considered immutable and the data passed in
+    is expected to be a list of objects in the structure that ProgramRequirement.load_bulk()
+    can consume.
+    """
+
+    def validate(self, data):
+        """Validate the tree"""
+        serializer = ProgramRequirementSerializer(
+            instance=self.instance,
+            data=data.get("children", []),
+            many=True,
+        )
+
+        children_serializer.is_valid(raise_exception=True)
+
+        return children_serializer.data
+
+    def update(self, instance, validated_data):
+        """Update the program requirement tree by bulk loading the input as children of the root"""
+        models.ProgramRequirement.load_bulk(validated_data, parent=instance)
+
+    @property
+    def data(self):
+        # here we're bypassing Serializer.data implementation because it coerces
+        # the to_representation return value into a dict of its keys
+        return self.to_representation(self.instance)
+
+    def to_representation(self, instance):
+        """Serializes the root node to a bulk dump of the tree"""
+        return models.ProgramRequirement.dump_bulk(parent=instance, keep_ids=False)

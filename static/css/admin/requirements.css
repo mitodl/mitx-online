@@ -33,6 +33,10 @@
     clear: both;
 }
 
+.program-requirements-field .je-table {
+    width: 100%;
+}
+
 .program-requirements-field div[data-schematype="object"] > .je-indented-panel {
     border: 0;
     margin: 0;

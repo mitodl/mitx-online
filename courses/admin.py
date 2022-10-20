@@ -44,17 +44,7 @@ class ProgramAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
 
-        self.save_requirements(obj, form)
-
-    def save_requirements(self, obj, form):
         data = form.cleaned_data["requirements"]
-
-        def _set_program_ids(nodes):
-            for node in nodes:
-                node["data"]["program_id"] = obj.id
-                _set_program_ids(node.get("children", []))
-
-        _set_program_ids(data)
 
         ProgramRequirement.load_bulk(data, parent=obj.requirements_root)
 
