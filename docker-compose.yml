@@ -64,10 +64,11 @@ services:
     ports:
       - "8011:8011"
       - "30011:30011"
+      - "3000:3000"
     environment:
       << : *py-environment
       PORT: 8011
-      DEBUGPY_PORT: ${DEBUGPY_PORT}
+      DEBUGPY_PORT: 3000
     env_file: .env
     links:
       - db

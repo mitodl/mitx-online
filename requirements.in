@@ -27,6 +27,7 @@ drf-extensions==0.7.1
 django-reversion==4.0.1
 django-storages==1.11.1
 djoser==2.1.0
+debugpy==1.5.1
 edx-api-client==1.4.1
 ipython
 mitol-django-common~=2.5.2
