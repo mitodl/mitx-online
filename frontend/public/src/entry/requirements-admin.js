@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", function() {
             disable_collapse: true,
             disable_edit_json: true,
             disable_properties: true,
-            iconlib: "spectre",
+            // iconlib: "spectre",
             keep_oneof_values: false,
             no_additional_properties: true,
             schema: schema,

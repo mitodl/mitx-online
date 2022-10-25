@@ -63,9 +63,11 @@ services:
     tty: true
     ports:
       - "8011:8011"
+      - "30011:30011"
     environment:
       << : *py-environment
       PORT: 8011
+      DEBUGPY_PORT: ${DEBUGPY_PORT}
     env_file: .env
     links:
       - db

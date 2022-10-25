@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.db.models import F
 from django.forms import ModelForm
 from django.forms.fields import JSONField
@@ -42,14 +43,13 @@ def program_requirements_schema():
                 "children": {
                     "type": "array",
                     "title": "Requirements",
-                    "format": "table",
                     "items": {
                         "title": "Requirement",
                         "$ref": "#/$defs/node",
                         "properties": {
                             "children": {
                                 "type": "array",
-                                "title": "Requirements",
+                                "title": "Courses",
                                 "format": "table",
                                 "options": {
                                     "dependencies": {
@@ -58,8 +58,10 @@ def program_requirements_schema():
                                 },
                                 "items": {
                                     "$ref": "#/$defs/node",
+                                    "title": "Course",
                                     "properties": {
                                         "data": {
+                                            "title": "Courses",
                                             "properties": {
                                                 "node_type": {
                                                     "type": "string",
@@ -82,6 +84,13 @@ def program_requirements_schema():
             "node": {
                 "type": "object",
                 "properties": {
+                    "id": {
+                        "type": "number",
+                        "default": None,
+                        "options": {
+                            "hidden": True,
+                        },
+                    },
                     "data": {
                         "type": "object",
                         "title": "Details",
@@ -104,7 +113,6 @@ def program_requirements_schema():
                             "title": {
                                 "type": "string",
                                 "title": "Title",
-                                "default": None,
                                 "options": {
                                     "dependencies": {
                                         "node_type": ProgramRequirementNodeType.OPERATOR.value,
@@ -115,19 +123,17 @@ def program_requirements_schema():
                                 "type": "string",
                                 "title": "Operation",
                                 "enum": ProgramRequirement.Operator.values,
-                                "default": None,
                                 "options": {
                                     "dependencies": {
                                         "node_type": ProgramRequirementNodeType.OPERATOR.value,
                                     },
-                                    "enum_titles": ProgramRequirement.Operator.labels
+                                    "enum_titles": ProgramRequirement.Operator.labels,
                                 },
                             },
                             "operator_value": {
                                 "type": "string",
                                 "format": "number",
                                 "title": "Value",
-                                "default": None,
                                 "options": {
                                     "dependencies": {
                                         "node_type": ProgramRequirementNodeType.OPERATOR.value,
@@ -139,7 +145,6 @@ def program_requirements_schema():
                             "course": {
                                 "type": "number",
                                 "title": "Course",
-                                "default": "undefined",
                                 "enum": [course.id for course in courses],
                                 "options": {
                                     "dependencies": {
@@ -149,7 +154,7 @@ def program_requirements_schema():
                                 },
                             },
                         },
-                    }
+                    },
                 },
             },
         },
@@ -168,7 +173,9 @@ class ProgramAdminForm(ModelForm):
         instance = kwargs.get("instance", None)
 
         if instance is not None and instance.requirements_root is not None:
-            initial["requirements"] = self._serialize_requirements(instance.requirements_root)
+            initial["requirements"] = self._serialize_requirements(
+                instance.requirements_root
+            )
 
         if not initial.get("requirements", None):
             initial["requirements"] = [
@@ -194,40 +201,32 @@ class ProgramAdminForm(ModelForm):
         super().__init__(*args, initial=initial, **kwargs)
 
     def _serialize_requirements(self, root):
-        data = ProgramRequirement.dump_bulk(
-            parent=root, keep_ids=False
-        )[0].get("children", [])
+        data = ProgramRequirement.dump_bulk(parent=root, keep_ids=True)[0].get(
+            "children", []
+        )
 
         def _serialize(node):
             return {
                 **node,
-                "children": [_serialize(child) for child in node.get("children", [])]
+                "children": [_serialize(child) for child in node.get("children", [])],
             }
-
 
         return [_serialize(node) for node in data]
 
-    def clean_requirements(self):
-        def _clean(req):
-            return {
-                **req,
-                "data": {
-                    **req["data"],
-                    "program_id": self.instance.id
-                },
-                **({
-                    "children": [_clean(req) for req in data["children"]]
-                } if "children" in req["data"] else {})
-            }
-
-        return [_clean(req) for req in self.cleaned_data["requirements"]]
-
-    def save_m2m(self):
+    def save(self, commit=True):
         """Save requirements"""
-        ProgramRequirement.load_bulk(
-            self.cleaned_data["requirements"],
-            parent=self.instance.requirements_root
-        )
+        super().save(commit=commit)
+        with transaction.atomic():
+            root = self.instance.get_requirements_root(for_update=True)
+            serializer = ProgramRequirementTreeSerializer(
+                root,
+                context={
+                    "program": self.instance,
+                },
+                data=self.cleaned_data["requirements"],
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
 
     class Meta:
         model = Program

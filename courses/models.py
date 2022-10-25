@@ -157,10 +157,17 @@ class Program(TimestampedModel, ValidateOnSaveMixin):
         """Gets the readable_id"""
         return self.readable_id
 
-    @property
+    @cached_property
     def requirements_root(self):
+        return self.get_requirements_root()
+
+    def get_requirements_root(self, *, for_update=False):
         """The root of the requirements tree"""
-        return ProgramRequirement.get_root_nodes().filter(program=self).first()
+        query = ProgramRequirement.get_root_nodes().filter(program=self)
+        if for_update:
+            query = query.select_for_update()
+
+        return query.first()
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -1012,17 +1019,17 @@ class ProgramRequirement(MP_Node):
     @property
     def is_operator(self):
         """True if the node is an operator"""
-        return self.node_type == NodeType.OPERATOR.value
+        return self.node_type == ProgramRequirementNodeType.OPERATOR.value
 
     @property
     def is_course(self):
         """True if the node references a course"""
-        return self.node_type == NodeType.COURSE.value
+        return self.node_type == ProgramRequirementNodeType.COURSE.value
 
     @property
     def is_root(self):
         """True if the node is the root"""
-        return self.node_type == NodeType.PROGRAM_ROOT.value
+        return self.node_type == ProgramRequirementNodeType.PROGRAM_ROOT.value
 
     def add_child(self, **kwargs):
         """Children must always have the same program"""

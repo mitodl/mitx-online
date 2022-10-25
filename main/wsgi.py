@@ -10,6 +10,10 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
+from main import debugger
+
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "main.settings")
+
+debugger.init_debugpy()
 
 application = get_wsgi_application()  # pylint: disable=invalid-name

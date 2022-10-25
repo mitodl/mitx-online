@@ -2,6 +2,7 @@ black
 bpython
 codecov
 ddt
+debugpy
 django-debug-toolbar
 factory-boy==3.2.0
 faker

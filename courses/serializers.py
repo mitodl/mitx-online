@@ -19,6 +19,7 @@ from ecommerce.models import Product
 from ecommerce.serializers import BaseProductSerializer, ProductFlexibilePriceSerializer
 from flexiblepricing.api import is_courseware_flexible_price_approved
 from main import features
+from main.serializers import StrictFieldsSerializer
 from openedx.constants import EDX_ENROLLMENT_AUDIT_MODE, EDX_ENROLLMENT_VERIFIED_MODE
 
 
@@ -475,75 +476,36 @@ class UserProgramEnrollmentDetailSerializer(serializers.Serializer):
     enrollments = CourseRunEnrollmentSerializer(many=True)
 
 
-class ProgramRequirementDataSerializer(serializers.Serializer):
+class ProgramRequirementDataSerializer(StrictFieldsSerializer):
     """Serializer for a ProgramRequirement tree to be serialized to and from a dict representation"""
 
+    node_type = serializers.ChoiceField(
+        choices=(
+            models.ProgramRequirementNodeType.OPERATOR,
+            models.ProgramRequirementNodeType.COURSE,
+        )
+    )
+    course = serializers.CharField(source="course_id", required=False)
+    program = serializers.CharField(source="program_id", required=False)
+    title = serializers.CharField(required=False)
+    operator = serializers.CharField(required=False)
+    operator_value = serializers.CharField(required=False)
 
 
-    node_type = serializers.CharField()
-    course_id = serializers.CharField()
-    program_id = serializers.CharField()
-    title = serializers.CharField()
-    operator = serializers.CharField()
-    operator_value = serializers.CharField()
-
-    def __init_(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        allowed = self._get_allowed_fields_by_node_type(kwargs.get("data", {}))
-        existing = set(self.fields)
-
-        for field_name in existing - allowed:
-            self.fields.pop(field_name)
-
-    def _get_allowed_fields_by_node_type(self, data):
-        node_type = data.get("node_type", None) 
-        # if node_type == ProgramRequirementNodeType.COURSE.value:
-        #     return { "node_type", "program_id", "course_id" }
-        # elif node_type == ProgramRequirementNodeType.OPERATOR.value:
-        #     return { "node_type", "program_id", "operator", "operator_value", "title" }
-
-        return set(self.fields)
-
-    def validate(self, data):
-        if data["node_type"] == ProgramRequirementNodeType.PROGRAM_ROOT.value:
-            raise ValidationError(
-                {
-                    "node_type": f"Node type '{ProgramRequirementNodeType.PROGRAM_ROOT.value}' is not supported for non-root nodes"
-                }
-            )
-
-        if data["node_type"] not in (
-            ProgramRequirementNodeType.OPERATOR.value,
-            ProgramRequirementNodeType.COURSE.value,
-        ):
-            raise ValidationError(
-                {"node_type": f"Node type '{data['node_type']}' is not supported"}
-            )
-
-        return validated_data
-
-
-class ProgramRequirementSerializer(serializers.Serializer):
+class ProgramRequirementSerializer(StrictFieldsSerializer):
     """Serializer for a ProgramRequirement tree to be serialized to and from a dict representation"""
 
+    id = serializers.IntegerField(required=False)
     data = ProgramRequirementDataSerializer()
 
-    def validate(self, data):
-        children_serializer = ProgramRequirementSerializer(
-            instance=self.instance,
-            data=data.get("children", []),
-            many=True,
-        )
-
-        children_serializer.is_valid(raise_exception=True)
-
-        data["children"] = children_serializer.data
-
-        return data
+    def get_fields(self):
+        """Override because 'children' is a recursive structure"""
+        fields = super().get_fields()
+        fields["children"] = ProgramRequirementSerializer(many=True, required=False)
+        return fields
 
 
-class ProgramRequirementTreeSerializer(serializers.Serializer):
+class ProgramRequirementTreeSerializer(serializers.ListSerializer):
     """
     Serializer for root nodes of a program requirement tree
 
@@ -552,28 +514,88 @@ class ProgramRequirementTreeSerializer(serializers.Serializer):
     can consume.
     """
 
-    def validate(self, data):
-        """Validate the tree"""
-        serializer = ProgramRequirementSerializer(
-            instance=self.instance,
-            data=data.get("children", []),
-            many=True,
-        )
-
-        children_serializer.is_valid(raise_exception=True)
-
-        return children_serializer.data
+    child = ProgramRequirementSerializer()
 
     def update(self, instance, validated_data):
-        """Update the program requirement tree by bulk loading the input as children of the root"""
-        models.ProgramRequirement.load_bulk(validated_data, parent=instance)
+        """
+        Update the program requirement tree
+
+        This is inspired by the load_bulk method, but that method is an append-only operation and doesn't update existing records
+        """
+
+        # get a map of existing nodes
+        existing_nodes = {
+            node.id: node for node in models.ProgramRequirement.get_tree(instance)
+        }
+
+        def _pop_existing(data):
+            """
+            Pops the node by id off the map so that we
+                a) don't reuse it elsewhere accidentally
+                b) can use existing_nodes as a list of discarded nodes to delete
+            """
+            node_id = data.get("id", None)
+            return existing_nodes.pop(node_id, None) if node_id else None
+
+        # we'll recursively walk the tree, in practice this is at most 3 deep under instance (OPERATOR -> OPERATOR -> COURSE)
+        def _update(parent, children_data):
+            last_updated_child = None
+            first_child = parent.get_first_child()
+
+            for node_data in children_data:
+                existing_child = _pop_existing(node_data)
+
+                data = node_data["data"]
+                children = node_data.get("children", [])
+
+                if existing_child is None:
+                    # we're inserting a new node
+                    if last_updated_child is not None:
+                        # insert after the last node we updated or inserted
+                        last_updated_child = last_updated_child.add_sibling(
+                            "right", **data
+                        )
+                    elif first_child is not None:
+                        # otherwise insert as the first sibling
+                        last_updated_child = first_child.add_sibling(
+                            "first-sibling", **data
+                        )
+                    else:
+                        # insert as a regular child node as there's no children yet
+                        last_updated_child = parent.add_child(**data)
+                else:
+                    # we have an existing node and need to move it and update it
+                    if last_updated_child is not None:
+                        # place it after the last node we updated
+                        existing_child.move(last_updated_child, pos="right")
+                    elif first_child is not None:
+                        # move it to the first sibling
+                        existing_child.move(first_child, "first-sibling")
+                    elif parent is not None:
+                        # this would only happen if the child is moving form another part of the tree, which
+                        # we don't support at the moment but it's here for completeness and future-proofing
+                        existing_child.move(parent, "first-child")
+
+                    # since this is an existing node we need to update the props and save
+                    for key, value in data.items():
+                        setattr(existing_child, key, value)
+
+                    existing_child.save(update_fields=data.keys())
+
+                    last_updated_child = existing_child
+
+                # if the input has children, process those
+                if children:
+                    _update(last_updated_child, children)
+
+        _update(instance, validated_data)
+
+        # delete everything that didn't show up in the input
+        models.ProgramRequirement.objects.filter(id__in=existing_nodes.keys()).delete()
 
     @property
     def data(self):
+        """Serializes the root node to a bulk dump of the tree"""
         # here we're bypassing Serializer.data implementation because it coerces
         # the to_representation return value into a dict of its keys
-        return self.to_representation(self.instance)
-
-    def to_representation(self, instance):
-        """Serializes the root node to a bulk dump of the tree"""
-        return models.ProgramRequirement.dump_bulk(parent=instance, keep_ids=False)
+        return models.ProgramRequirement.dump_bulk(parent=self.instance, keep_ids=True)

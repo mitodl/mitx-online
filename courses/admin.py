@@ -23,7 +23,6 @@ from courses.models import (
     Program,
     ProgramEnrollment,
     ProgramEnrollmentAudit,
-    ProgramRequirement,
     ProgramRun,
     PaidCourseRun,
 )
@@ -40,13 +39,6 @@ class ProgramAdmin(admin.ModelAdmin):
     search_fields = ["title", "readable_id"]
     list_display = ("id", "title", "readable_id")
     list_filter = ["live"]
-
-    def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)
-
-        data = form.cleaned_data["requirements"]
-
-        ProgramRequirement.load_bulk(data, parent=obj.requirements_root)
 
 
 class ProgramRunAdmin(admin.ModelAdmin):
