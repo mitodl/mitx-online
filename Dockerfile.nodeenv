@@ -1,0 +1,4 @@
+FROM node:17.8
+
+COPY . /app
+WORKDIR /app

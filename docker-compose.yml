@@ -22,6 +22,7 @@ x-extra-hosts:
   &default-extra-hosts
   - "edx.odl.local:${OPENEDX_IP:-172.22.0.1}"
   - "host.docker.internal:host-gateway"
+  - "local.overhang.io:host-gateway"
 
 services:
   db:
@@ -41,7 +42,6 @@ services:
       - web
     volumes:
       - ./config/nginx.conf.erb:/etc/nginx/templates/nginx.conf.erb
-      - ./:/app
     environment:
       NGINX_WORKERS: 1
       PORT: 8013
@@ -68,18 +68,17 @@ services:
     links:
       - db
       - redis
-      # these are links instead of `depends_on` 
+      # these are links instead of `depends_on`
       # because if we just want a shell for `web` we don't want to run these
       - watch
       - refine
-    volumes:
-      - .:/app
-      - django_media:/var/media
     extra_hosts: *default-extra-hosts
 
   watch:
-    image: node:17.8
-    working_dir: /app 
+    build:
+      context: .
+      dockerfile: Dockerfile.nodeenv
+    working_dir: /app
     command: ./scripts/run-watch-dev.sh
     ports:
       - "8012:8012"
@@ -90,9 +89,6 @@ services:
       CONTAINER_NAME: 'watch'
       PORT: 8012
     env_file: .env
-    volumes:
-      - .:/app
-      - yarn-cache:/home/mitodl/.cache/yarn
     healthcheck:
       test: curl -f http://watch:8012/health || exit 1
       interval: 30s
@@ -114,13 +110,12 @@ services:
     links:
       - db
       - redis
-    volumes:
-      - .:/app
-      - django_media:/var/media
     extra_hosts: *default-extra-hosts
 
   refine:
-    image: node:17.8
+    build:
+      context: .
+      dockerfile: Dockerfile.nodeenv
     working_dir: /app
     command: ./scripts/run-refine-dev.sh
     ports:
@@ -129,9 +124,6 @@ services:
       PUBLIC_PATH: http://${MITX_ONLINE_HOSTNAME:-mitxonline.odl.local}:8016/
       PORT: 8016
       NODE_ENV: ${NODE_ENV:-development}
-    volumes:
-      - .:/app
-      - npm-cache:/root/.npm
     depends_on:
       # this doesn't really depend on watch but they step on each other if they start at the same time
       watch:
@@ -163,9 +155,9 @@ services:
 
   varnish:
     image: varnish:fresh
-    links: 
+    links:
       - nginx
-    ports: 
+    ports:
       - "8013:80"
     volumes:
       - ./config/default.vcl:/etc/varnish/default.vcl:ro
