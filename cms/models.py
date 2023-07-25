@@ -46,6 +46,7 @@ from cms.blocks import (
 from cms.constants import (
     CERTIFICATE_INDEX_SLUG,
     COURSE_INDEX_SLUG,
+    INSTRUCTOR_INDEX_SLUG,
     PROGRAM_INDEX_SLUG,
     SIGNATORY_INDEX_SLUG,
 )
@@ -110,6 +111,33 @@ class SignatoryIndexPage(SignatoryObjectIndexPage):
     """
 
     slug = SIGNATORY_INDEX_SLUG
+
+
+class InstructorIndexPage(Page):
+    """Holding location for instructor bio pages."""
+
+    slug = INSTRUCTOR_INDEX_SLUG
+
+    parent_page_types = ["HomePage"]
+    subpage_types = ["InstructorPage"]
+
+    @classmethod
+    def can_create_at(cls, parent):
+        """
+        You can only create one of these pages under the home page.
+        The parent is limited via the `parent_page_type` list.
+        """
+        return (
+            super().can_create_at(parent)
+            and not parent.get_children().type(cls).exists()
+        )
+
+    def serve(self, request, *args, **kwargs):
+        """
+        For index pages we raise a 404 because these pages do not have a template
+        of their own and we do not expect a page to available at their slug.
+        """
+        raise Http404
 
 
 class CertificateIndexPage(RoutablePageMixin, Page):
@@ -1459,3 +1487,74 @@ class SignatoryPage(Page):
         designed to be viewed on their own so we raise a 404 if someone tries to access their slug.
         """
         raise Http404
+
+
+class InstructorPage(Page):
+    """
+    Basic resource page class for pages containing basic information (FAQ, etc.)
+    """
+
+    RICH_TEXT_FIELD_FEATURES = [
+        "h1",
+        "h2",
+        "h3",
+        "ol",
+        "ul",
+        "hr",
+        "bold",
+        "italic",
+        "link",
+        "document-link",
+        "image",
+        "embed",
+    ]
+
+    template = "resource_page.html"
+    parent_page_types = ["InstructorIndexPage"]
+    subpage_types = []
+
+    featured_image = models.ForeignKey(
+        Image,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        help_text="Upload the instructor's featured image (typically a headshot).",
+    )
+
+    instructor_name = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        default="Tristan Doe",
+        help_text="The instructor's name.",
+    )
+
+    instructor_title = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        default="Scholar",
+        help_text="The instructor's title.",
+    )
+
+    short_bio = RichTextField(
+        null=True,
+        blank=True,
+        help_text="A short bio, used in the card shown in a Meet Your Instructors section.",
+        features=RICH_TEXT_FIELD_FEATURES,
+    )
+
+    application_denied_text = RichTextField(
+        null=True,
+        blank=True,
+        help_text="A longer bio.",
+        features=RICH_TEXT_FIELD_FEATURES,
+    )
+
+    def get_context(self, request, *args, **kwargs):
+        return {
+            **super().get_context(request, *args, **kwargs),
+            **get_base_context(request),
+            "site_name": settings.SITE_NAME,
+        }
