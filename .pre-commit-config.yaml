@@ -1,23 +1,85 @@
+---
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
-  - repo: git@github.com:Yelp/detect-secrets
-    rev: v0.14.2
-    hooks:
-    -   id: detect-secrets
-        args: ['--baseline', '.secrets.baseline']
-        exclude: .*_test.*|yarn\.lock
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v2.3.0
+    rev: v4.4.0
     hooks:
-    - id: end-of-file-fixer
-      verbose: true
-    - id: trailing-whitespace
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+        exclude: ".hbs$"
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: debug-statements
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.0.3
+    hooks:
+      - id: prettier
   - repo: https://github.com/psf/black
-    rev: 22.10.0
+    rev: 23.7.0
     hooks:
-    - id: black
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.12.0
+      - id: black
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.7.0-1
     hooks:
-    - id: isort
+      - id: shfmt-docker
+  - repo: https://github.com/adrienverge/yamllint.git
+    rev: v1.32.0
+    hooks:
+      - id: yamllint
+        args: [--format, parsable, -d, relaxed]
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args:
+          - --baseline
+          - .secrets.baseline
+          - --exclude-files
+          - .yarn/
+          - --exclude-files
+          - cassettes/
+          - --exclude-files
+          - test_json/
+          - --exclude-files
+          - ".*_test.py"
+          - --exclude-files
+          - "test_.*.py"
+          - --exclude-files
+          - poetry.lock
+          - --exclude-files
+          - yarn.lock
+          - --exclude-files
+          - ".*/generated/"
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: "v0.0.286"
+    hooks:
+      - id: ruff
+        args: [--extend-ignore=D1, --fix]
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint
+        description: "Lint JS/TS files and apply automatic fixes"
+        entry: bash -c "npx eslint --fix $@"
+        language: node
+        types_or: [javascript, jsx, ts, tsx]
+        args: []
+        exclude: "(node_modules/|.yarn/)"
+        require_serial: false
+      - id: scss-lint
+        name: scss-lint
+        description: "Lint SCSS files"
+        entry: bash -c "npx stylelint --allow-empty-input --fix $@"
+        language: node
+        types: [scss]
+        args: []
+        exclude: node_modules/
+        require_serial: false
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.5
+    hooks:
+      - id: shellcheck
+        args: ["--severity=warning"]
