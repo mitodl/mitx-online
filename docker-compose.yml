@@ -57,6 +57,11 @@ services:
       context: .
       dockerfile: Dockerfile
       target: django-server
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: "1g"
     command: ./scripts/run-django-dev.sh
     stdin_open: true
     tty: true
@@ -172,6 +177,15 @@ services:
       - ./config/default.vcl:/etc/varnish/default.vcl:ro
     depends_on:
       - nginx
+
+  locust:
+    image: locustio/locust
+    ports:
+      - "8089:8089"
+    volumes:
+      - ./:/src
+    command: >
+      -f /src/locustfile.py
 
 volumes:
   npm-cache: {}

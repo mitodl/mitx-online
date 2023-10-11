@@ -34,7 +34,6 @@ class DjangoAdminUser(HttpUser):
         programs, courses = self._navigate_to_catalog()
         self._navigate_to_product_page("program", programs)
         self._navigate_to_product_page("course", courses)
-        self._navigate_to_checkout_page()
         logging.info(f"{self} has gone off to learn")
 
     def _navigate_to_catalog(self):
