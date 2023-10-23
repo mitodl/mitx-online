@@ -16,13 +16,12 @@ To set up locally:
 
 Set up uwsgitop
 ---------------
-1. Install uwsgitop: ``docker compose run --rm web poetry add uwsgitop``
-2. Set UWSGI_RELOAD_ON_RSS in your .env to a high value (e.g. 500)
-3. Set UWSGI_MAX_REQUESTS in your .env to a high value (e.g. 10000)
-4. ``docker compose build``
-5. ``docker compose up``
-6. In a new terminal window/tab, ``docker compose exec web uwsgitop /tmp/uwsgi-stats.sock``
-7. You should see your application's memory usage without usage. Ready to go.
+1. Set UWSGI_RELOAD_ON_RSS in your .env to a high value (e.g. 500)
+2. Set UWSGI_MAX_REQUESTS in your .env to a high value (e.g. 10000)
+3. ``docker compose build``
+4. ``docker compose up``
+5. In a new terminal window/tab, ``docker compose exec web uwsgitop /tmp/uwsgi-stats.sock``
+6. You should see your application's memory usage without usage. Ready to go.
 
 
 Set up Locust
@@ -65,4 +64,36 @@ Put it all together
 To test:
 ******************
 
-Coming soon!
+For each step of the testing, you will have 2 tools open. These are:
+- uWSGI via ``docker compose exec web uwsgitop /tmp/uwsgi-stats.sock`` in terminal, and
+- Locust via ``http://0.0.0.0:8089/`` in your browser
+
+Start the app with your base, starting values and run tests in an increasing frequency while keeping note of the following values:
+- In uwsgitop:
+  - AVG - average request time
+  - RSS - worker resident set size (over simply: how big the worker gets to handle requests)
+  - REQ - how many requests the worker has made
+- In Locust:
+  - Median & Average ms - in my experience these are close, but if they are not in yours, it might be a good indicator
+  - # of requests which will be helpful for the next item
+  - # of fails and when failures start popping up
+
+You will want to look at these at the start, as things are progressing take some touch points, when failures start
+popping up, and once the workers reach your current reload-on-rss and max-requests values.
+
+I stepped up my tests:
+number of users: 1, 100, 250, 500
+spawn rate: 1, 5, 10, 50
+
+I found that this gave me a little variability around what was spawning when.
+
+Once you've run a set of tests with the starting values, you will find that the rss value might be out of range. Take
+note of the starting value and teh breaking value and go a bit under the breaking value.  Take this new starting
+reload_on_rss value and divide available memory by it & round down to determine workers. You will then need to tune your
+threads up and down to find a place where you're able to keep response time low, but also workers aren't reloading so
+often it's disruptive.  This is where the response times will come in handy as well as noting how many requests you get
+between reloads.
+
+This is largely a process of trial and error, with a starting set point from which you can tune the value until you find
+balance.
+

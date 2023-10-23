@@ -1162,3 +1162,7 @@ HUBSPOT_PORTAL_ID = get_string(
     default="",
     description="Hubspot Portal ID",
 )
+
+DEBUG_TOOLBAR_CONFIG = {
+    'SHOW_TOOLBAR_CALLBACK': lambda _request: DEBUG
+}
