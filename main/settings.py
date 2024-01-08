@@ -225,9 +225,9 @@ MIDDLEWARE = (
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "oauth2_provider.middleware.OAuth2TokenMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
+    # "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
+    # "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -385,6 +385,7 @@ SOCIAL_AUTH_PIPELINE = (
     "authentication.pipeline.user.get_username",
     # Create a user if one doesn't exist, and require a password and name
     "authentication.pipeline.user.create_user_via_email",
+    "authentication.pipeline.user.create_user_via_oidc",
     # verify the user against export compliance
     # "authentication.pipeline.compliance.verify_exports_compliance",
     # Create the record that associates the social account with the user.
@@ -882,6 +883,7 @@ CACHES = {
 }
 
 AUTHENTICATION_BACKENDS = (
+    "authentication.backends.ol_open_id_connect.OlOpenIdConnectAuth",
     "social_core.backends.email.EmailAuth",
     "oauth2_provider.backends.OAuth2Backend",
     "django.contrib.auth.backends.ModelBackend",
@@ -1163,3 +1165,36 @@ HUBSPOT_PORTAL_ID = get_string(
     default="",
     description="Hubspot Portal ID",
 )
+# Social Auth configurations - [START]
+SOCIAL_AUTH_OL_OIDC_OIDC_ENDPOINT = get_string(
+    name="SOCIAL_AUTH_OL_OIDC_OIDC_ENDPOINT",
+    default=None,
+    description="The base URI for OpenID Connect discovery, https://<OIDC_ENDPOINT>/ without .well-known/openid-configuration.",
+)
+SOCIAL_AUTH_OL_OIDC_KEY = get_string(
+    name="SOCIAL_AUTH_OL_OIDC_KEY",
+    default="some available client id",
+    description="The client ID provided by the OpenID Connect provider.",
+)
+SOCIAL_AUTH_OL_OIDC_SECRET = get_string(
+    name="SOCIAL_AUTH_OL_OIDC_SECRET",
+    default="some super secret key",
+    description="The client secret provided by the OpenID Connect provider.",
+)
+USERINFO_URL = get_string(
+    name="USERINFO_URL",
+    default=None,
+    description="Provder endpoint where client sends requests for identity claims.",
+)
+ACCESS_TOKEN_URL = get_string(
+    name="ACCESS_TOKEN_URL",
+    default=None,
+    description="Provider endpoint where client exchanges the authorization code for tokens.",
+)
+
+AUTHORIZATION_URL = get_string(
+    name="AUTHORIZATION_URL",
+    default=None,
+    description="Provider endpoint where the user is asked to authenticate.",
+)
+# Social Auth configurations - [END]

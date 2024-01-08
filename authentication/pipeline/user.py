@@ -1,22 +1,18 @@
 """Auth pipline functions for user authentication"""
-import json
 import logging
 
-import requests
-from django.conf import settings
 from django.db import IntegrityError
+from django.db import transaction
 from mitol.common.utils import dict_without_keys
+from authentication.backends.ol_open_id_connect import OlOpenIdConnectAuth
 from social_core.backends.email import EmailAuth
 from social_core.exceptions import AuthException
 from social_core.pipeline.partial import partial
-
-from authentication.api import create_user_with_generated_username
 from authentication.exceptions import (
     EmailBlockedException,
     InvalidPasswordException,
     RequirePasswordAndPersonalInfoException,
     RequirePasswordException,
-    RequireProfileException,
     RequireRegistrationException,
     UnexpectedExistingUserException,
     UserCreationFailedException,
@@ -25,7 +21,7 @@ from authentication.utils import SocialAuthState, is_user_email_blocked
 from openedx import api as openedx_api
 from openedx import tasks as openedx_tasks
 from users.serializers import UserSerializer
-from users.utils import usernameify
+from users.models import User
 
 log = logging.getLogger()
 
@@ -137,6 +133,106 @@ def create_user_via_email(
         raise UserCreationFailedException(backend, current_partial) from exc
 
     return {"is_new": True, "user": created_user, "username": created_user.username}
+
+
+@partial
+def create_user_via_oidc(
+    strategy,
+    backend,
+    user=None,
+    response=None,
+    flow=None,
+    current_partial=None,
+    *args,
+    **kwargs,
+):  # pylint: disable=too-many-arguments,unused-argument
+    """
+    Creates a new user if one does not already exist, updates an existing user's attributes.
+    Args:
+        strategy (social_django.strategy.DjangoStrategy): the strategy used to authenticate
+        backend (social_core.backends.base.BaseAuth): the backend being used to authenticate
+        user (User): the current user
+        details (dict): Dict of user details
+        flow (str): the type of flow (login or register)
+        current_partial (Partial): the partial for the step in the pipeline
+    """
+
+    if backend.name == OlOpenIdConnectAuth.name:
+        data = response.copy()
+        try:
+            data["is_staff"] = (
+                "is_staff" in data["resource_access"]["mitxonline-client-id"]["roles"]
+            )
+            data["is_superuser"] = (
+                "is_superuser"
+                in data["resource_access"]["mitxonline-client-id"]["roles"]
+            )
+        except KeyError:
+            pass
+    else:
+        return {}
+
+    if user is None:
+        with transaction.atomic():
+            if "is_staff" in data and "is_superuser" in data:
+                user = User.objects.create_superuser(
+                    data["preferred_username"],
+                    email=data["email"],
+                    password=None,
+                    name=data["name"],
+                )
+            else:
+                user = User.objects.create_user(
+                    data["preferred_username"],
+                    email=data["email"],
+                    password=None,
+                    name=data["name"],
+                )
+    else:
+        user.username = data["email"]
+        user.email = data["email"]
+        user.name = data["name"]
+
+    # Update user's legal address record.
+    user.legal_address.first_name = data.get(
+        "given_name", user.legal_address.first_name
+    )
+    user.legal_address.last_name = data.get("family_name", user.legal_address.last_name)
+    user.legal_address.country = data.get("country", user.legal_address.country)
+    user.legal_address.state = data.get("state", user.legal_address.state)
+
+    # Update user's profile record.
+    user.user_profile.gender = data.get("gender", user.user_profile.gender)
+    user.user_profile.year_of_birth = data.get(
+        "year_of_birth", user.user_profile.year_of_birth
+    )
+    user.user_profile.company = data.get("company", user.user_profile.company)
+    user.user_profile.years_experience = data.get(
+        "years_experience", user.user_profile.years_experience
+    )
+    user.user_profile.leadership_level = data.get(
+        "leadership_level", user.user_profile.leadership_level
+    )
+    user.user_profile.highest_education = data.get(
+        "highest_education", user.user_profile.highest_education
+    )
+    user.user_profile.type_is_student = data.get(
+        "type_is_student", user.user_profile.type_is_student
+    )
+    user.user_profile.type_is_professional = data.get(
+        "type_is_professional", user.user_profile.type_is_professional
+    )
+    user.user_profile.type_is_educator = data.get(
+        "type_is_educator", user.user_profile.type_is_educator
+    )
+    user.user_profile.type_is_other = data.get(
+        "type_is_other", user.user_profile.type_is_other
+    )
+    user.is_active = True
+
+    user.save()
+
+    return {"is_new": True, "user": user, "username": user.username}
 
 
 @partial
