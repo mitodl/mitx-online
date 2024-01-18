@@ -40,14 +40,25 @@
 @import "product-page/program-courses.scss";
 
 body {
-  font-family: "Montserrat", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: Inter, sans-serif;
   margin: 0;
   color: #000000;
-  background: #f5f5f5;
+  background: white;
   display: flex;
   min-height: 100vh;
   flex-direction: column;
   position: relative;
+
+  h2 {
+    font-family: Poppins;
+
+  }
+  h1 {
+    font-family: Poppins;
+    @include media-breakpoint-up(lg) {
+      font-size: 45px;
+    }
+  }
 
   .main-panel {
     flex: 1;
@@ -71,9 +82,7 @@ body {
     padding-top: 50px;
     padding-bottom: 50px;
   }
-}
 
-body.new-design {
   .modal-title {
     font-family: Poppins, sans-serif;
     font-weight: 700;
@@ -95,4 +104,10 @@ body.new-design {
     background-position: 97% center;
     background-size: 12px auto;
   }
+
+  .badge.badge-dark {
+    font-weight: 400;
+    color: white;
+    background-color: black;
+}
 }

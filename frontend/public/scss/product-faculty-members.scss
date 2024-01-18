@@ -11,83 +11,15 @@
   }
 }
 
-body.new-design {
-
-  .faculty-members {
-    li {
-      width: calc(50% - 20px);
-      margin: 0 10px 10px;
-      min-width: 275px;
-
-      img {
-        margin: 0 15px 0 0;
-      }
-    }
-    .member-card {
-      padding: 15px;
-
-      .member-info {
-        overflow: hidden;
-        margin: 0;
-
-        h3 {
-          font-size: 16px;
-          font-weight: 700;
-          line-height: normal;
-        }
-
-        h4 {
-          font-size: 13px;
-          font-weight: 400;
-          line-height: normal;
-          margin-bottom: 0;
-        }
-      }
-    }
-  }
-}
 .faculty-members {
   li {
     @include media-breakpoint-down(md) {
       width: calc(100% - 44px);
     }
 
-    width: calc(50% - 44px);
-    margin: 0 22px 24px;
-    min-width: min-content;
-
-    .member-card {
-      padding: 24px;
-      border-radius: 4px !important;
-      box-shadow: 0 1px 0 0 rgb(0 0 0 / 12%);
-      display: flex;
-
-      .member-info {
-        margin-top: 7px;
-        display: flow-root;
-
-        @include media-breakpoint-down(md) {
-          margin-top: 20px;
-        }
-
-        p {
-          font-size: 14px;
-        }
-
-        .description {
-          p {
-            margin: 0;
-            color: $label-subtitle;
-          }
-        }
-      }
-
-      &:hover {
-        h3 {
-          color: $brand-button-bg;
-        }
-      }
-    }
+    width: calc(50% - 20px);
+    margin: 0 10px 10px;
+    min-width: 275px;
 
     img {
       float: left;
@@ -95,11 +27,58 @@ body.new-design {
       width: 110px;
       border-radius: 50%;
       object-fit: cover;
-      margin: 0 24px 20px 0;
+      margin: 0 15px 0 0;
 
       @include media-breakpoint-down(sm) {
         display: block;
         float: none;
+      }
+    }
+  }
+  .member-card {
+    padding: 15px;
+    border-radius: 4px !important;
+    box-shadow: 0 1px 0 0 rgb(0 0 0 / 12%);
+    display: flex;
+
+    &:hover {
+      h3 {
+        color: $brand-button-bg;
+      }
+    }
+
+    .member-info {
+      overflow: hidden;
+      margin: 0;
+      margin-top: 7px;
+      display: flow-root;
+
+      @include media-breakpoint-down(md) {
+        margin-top: 20px;
+      }
+
+      p {
+        font-size: 14px;
+      }
+
+      .description {
+        p {
+          margin: 0;
+          color: $label-subtitle;
+        }
+      }
+
+      h3 {
+        font-size: 16px;
+        font-weight: 700;
+        line-height: normal;
+      }
+
+      h4 {
+        font-size: 13px;
+        font-weight: 400;
+        line-height: normal;
+        margin-bottom: 0;
       }
     }
   }

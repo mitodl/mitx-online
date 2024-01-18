@@ -4,14 +4,16 @@
 header.site-header {
   box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14);
   background-color: $white;
+  font-family: Inter;
 
-  .navbar {
+  .navbar.top-navbar {
     display: flex;
     justify-content: space-between;
-    padding: 0;
+    padding: 12px 15px;
 
     @include media-breakpoint-down(md) {
       position: static;
+      padding: 15px 15px;
     }
   }
 
@@ -255,27 +257,6 @@ header.site-header {
 }
 
 // New Design
-header.site-header.new-design {
-  box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14);
-  background-color: $white;
-  font-family: Inter;
-
-  .navbar.top-navbar {
-    display: flex;
-    justify-content: space-between;
-    padding: 12px 15px;
-
-    @include media-breakpoint-down(md) {
-      position: static;
-      padding: 15px 15px;
-    }
-  }
-
-  .nowrap {
-    flex-wrap: unset;
-  }
-}
-
 .full-screen-top-menu {
   display: block;
   font-size: 14px;

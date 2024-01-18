@@ -1,11 +1,5 @@
 // sass-lint:disable mixins-before-declarations
-body.new-design {
-    .badge.badge-dark {
-        font-weight: 400;
-        color: white;
-        background-color: black;
-    }
-
+body {
     p.program-type-badge {
         margin-bottom: 0;
     }

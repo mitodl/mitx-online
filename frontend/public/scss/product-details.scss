@@ -370,46 +370,6 @@
         }
       }
     }
-
-    #upsellCard {
-      width: 497px;
-      padding: 0 24px 24px 24px;
-      flex-shrink: 0;
-      float: right;
-
-      @include media-breakpoint-down(lg) {
-        width: 100%;
-        padding: 0 12px 12px 12px;
-      }
-
-      div.card {
-        padding: 24px;
-      }
-
-      p {
-        line-height: 24px;
-      }
-
-      div.upsell-header {
-        margin-left: 0;
-        margin-right: 0;
-
-        span.badge {
-          font-weight: normal;
-          font-size: .85rem;
-          margin-bottom: .25rem !important;
-          padding: 0.35rem !important;
-        }
-
-        span.bg-danger {
-          background-color: #fae8e8 !important;
-          color: #b43e3e;
-        }
-      }
-      form {
-        margin-bottom: 20px;
-      }
-    }
   }
 
   .about-text {
