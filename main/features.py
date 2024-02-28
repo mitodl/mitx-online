@@ -1,9 +1,11 @@
 """MITxOnline feature flags"""
+import logging
 import os
-import uuid
 from functools import wraps
 
 from django.conf import settings
+
+log = logging.getLogger(__name__)
 
 IGNORE_EDX_FAILURES = "IGNORE_EDX_FAILURES"
 SYNC_ON_DASHBOARD_LOAD = "SYNC_ON_DASHBOARD_LOAD"
@@ -32,13 +34,12 @@ def is_enabled(name, default=None, unique_id=settings.HOSTNAME):
         bool: True if the feature flag is enabled
     """
 
-    if "IN_TEST_SUITE" not in os.environ and settings.POSTHOG_API_KEY:
+    if "IN_TEST_SUITE" not in os.environ and hasattr(settings, "POSTHOG_API_HOST"):
         import posthog
     else:
         posthog = None
-    return (
-        posthog
-        and posthog.get_feature_flag(
+    try:
+        feature_response = posthog and posthog.get_feature_flag(
             name,
             unique_id,
             person_properties={
@@ -46,7 +47,12 @@ def is_enabled(name, default=None, unique_id=settings.HOSTNAME):
                 "user_id": unique_id,
             },
         )
-    ) or settings.FEATURES.get(name, default or settings.FEATURES_DEFAULT)
+    except Exception as e:
+        log.error(f"Error getting feature flag {name}: {e}")
+        feature_response = settings.FEATURES.get(
+            name, default or settings.FEATURES_DEFAULT
+        )
+    return feature_response
 
 
 def if_feature_enabled(name, default=None):
