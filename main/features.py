@@ -32,7 +32,7 @@ def is_enabled(name, default=None, unique_id=settings.HOSTNAME):
         bool: True if the feature flag is enabled
     """
 
-    if "IN_TEST_SUITE" not in os.environ:
+    if "IN_TEST_SUITE" not in os.environ and settings.POSTHOG_API_KEY:
         import posthog
     else:
         posthog = None
