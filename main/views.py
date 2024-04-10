@@ -9,6 +9,7 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from django.views.decorators.cache import never_cache
 from rest_framework.pagination import LimitOffsetPagination
+
 from main import features
 
 
@@ -16,18 +17,7 @@ def get_base_context(request):
     """
     Returns the template context key/values needed for the base template and all templates that extend it
     """
-    context = {
-        "new_design": features.is_enabled(
-            features.ENABLE_NEW_DESIGN,
-            False,
-            request.user.id if request.user.is_authenticated else "anonymousUser",
-        ),
-        "new_footer": features.is_enabled(
-            features.ENABLE_NEW_FOOTER,
-            False,
-            request.user.id if request.user.is_authenticated else "anonymousUser",
-        ),
-    }
+    context = {}
 
     if settings.GOOGLE_DOMAIN_VERIFICATION_TAG_VALUE:
         context[

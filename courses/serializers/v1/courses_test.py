@@ -2,21 +2,21 @@ import bleach
 import pytest
 from django.contrib.auth.models import AnonymousUser
 
-from cms.factories import FlexiblePricingFormFactory, CoursePageFactory
+from cms.factories import CoursePageFactory, FlexiblePricingFormFactory
 from cms.serializers import CoursePageSerializer
 from courses.factories import (
-    CourseRunFactory,
     CourseRunEnrollmentFactory,
+    CourseRunFactory,
     CourseRunGradeFactory,
 )
 from courses.models import Department
 from courses.serializers.v1.base import BaseCourseSerializer, CourseRunGradeSerializer
 from courses.serializers.v1.courses import (
-    CourseRunSerializer,
-    CourseWithCourseRunsSerializer,
-    CourseSerializer,
-    CourseRunWithCourseSerializer,
     CourseRunEnrollmentSerializer,
+    CourseRunSerializer,
+    CourseRunWithCourseSerializer,
+    CourseSerializer,
+    CourseWithCourseRunsSerializer,
 )
 from courses.serializers.v1.programs import ProgramSerializer
 from ecommerce.serializers import BaseProductSerializer
@@ -32,7 +32,6 @@ pytestmark = [pytest.mark.django_db]
 @pytest.mark.parametrize("all_runs", [True, False])
 def test_serialize_course(mocker, mock_context, is_anonymous, all_runs, settings):
     """Test Course serialization"""
-    settings.FEATURES[features.ENABLE_NEW_DESIGN] = True
     if is_anonymous:
         mock_context["request"].user = AnonymousUser()
     if all_runs:
