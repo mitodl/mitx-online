@@ -5,6 +5,7 @@
 python3 manage.py collectstatic --noinput --clear
 python3 manage.py migrate --noinput
 python3 manage.py configure_wagtail
+python3 manage.py createcachetable
 
 health_urls=(
 	"http://watch:8012/health"

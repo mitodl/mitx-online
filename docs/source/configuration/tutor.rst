@@ -91,6 +91,7 @@ To set up MITx Online:
    * ``OPENEDX_SERVICE_WORKER_API_TOKEN``\ : set to the token you generated
 
 #. Build the app: ``docker compose build``
+#. Add the cache database table: ``docker compose run --rm web ./manage.py createcachetable``
 #. Run migrations and configure Wagtail::
 
       docker compose run --rm web ./manage.py migrate
@@ -126,6 +127,8 @@ These steps will also disable the AuthN SSO MFE, so from here on you'll get norm
       social-auth-mitxpro
       mitxpro-openedx-extensions
 
+   Can also be done via tutor config save --append OPENEDX_EXTRA_PIP_REQUIREMENTS="social-auth-mitxpro\nmitxpro-openedx-extensions"
+
 #. Edit the ``env/apps/openedx/config/lms.env.yml`` file and add::
 
       FEATURES:
@@ -143,7 +146,7 @@ These steps will also disable the AuthN SSO MFE, so from here on you'll get norm
    * Find and update:
 
      * ``FEATURES['ENABLE_AUTHN_MICROFRONTEND'] = False`` (defaults to True)
-     * ``REGISTRATION_EXTRA_FIELDS["terms_of_service"] = "hidden"`` (defaults to required)
+     * ``REGISTRATION_EXTRA_FIELDS["terms_of_service"] = "hidden"`` (defaults to required) - I am finding this defaults to hidden now
 
 #. Build a new ``openedx`` image: ``tutor images build openedx`` (this will take a long time)
 #. Run a Docker Compse rebuild: ``tutor local dc build`` (this should be pretty quick - it's likely not required, just doing it here for safety)
