@@ -47,10 +47,12 @@ export class App extends React.Component<Props, void> {
     const userMsg = getStoredUserMessage()
     if (userMsg) {
       addUserNotification({
+
+
         "loaded-user-msg": {
           type:  userMsg.type,
           props: {
-            text: userMsg.text
+            text: userMsg.text,
           }
         }
       })

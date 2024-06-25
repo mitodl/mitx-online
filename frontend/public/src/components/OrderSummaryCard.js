@@ -14,7 +14,8 @@ type Props = {
   refunds: Array<Refund>,
   addDiscount?: Function,
   discountCode: string,
-  cardTitle?: string
+  cardTitle?: string,
+  cardType?: string,
 }
 
 export class OrderSummaryCard extends React.Component<Props> {

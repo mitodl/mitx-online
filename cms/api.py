@@ -79,6 +79,7 @@ def _create_resource_page(title: str) -> cms_models.ResourcePage:
             },
         )
     )
+
     return page
 
 
